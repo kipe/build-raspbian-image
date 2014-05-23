@@ -57,6 +57,8 @@
 # you need at least
 # apt-get install binfmt-support qemu qemu-user-static debootstrap kpartx lvm2 dosfstools
 
+set -x
+
 deb_mirror="http://archive.raspbian.org/raspbian"
 deb_local_mirror="http://localhost:3142/archive.raspbian.org/raspbian"
 
@@ -168,7 +170,7 @@ mount -o bind ${delivery_path} ${rootfs}/usr/src/delivery
 
 cd ${rootfs}
 
-debootstrap --foreign --arch armhf ${deb_release} ${rootfs} ${deb_local_mirror}
+debootstrap --no-check-gpg --foreign --arch armhf ${deb_release} ${rootfs} ${deb_local_mirror}
 cp /usr/bin/qemu-arm-static usr/bin/
 LANG=C chroot ${rootfs} /debootstrap/debootstrap --second-stage
 
@@ -206,19 +208,20 @@ rm -f /debconf.set
 
 cd /usr/src/delivery
 apt-get update
-apt-get -y install git-core binutils ca-certificates
-wget --continue https://raw.github.com/Hexxeh/rpi-update/master/rpi-update -O /usr/bin/rpi-update
-chmod +x /usr/bin/rpi-update
-mkdir -p /lib/modules/3.1.9+
+apt-get -y install git-core binutils ca-certificates curl
+curl -L --output /usr/bin/rpi-update https://raw.github.com/Hexxeh/rpi-update/master/rpi-update && chmod +x /usr/bin/rpi-update
 touch /boot/start.elf
-rpi-update
+SKIP_BACKUP=1 /usr/bin/rpi-update
 
 apt-get -y install locales console-common ntp openssh-server less vim
 
 # execute install script at mounted external media (delivery contents folder)
 cd /usr/src/delivery
 ./install.sh
-cd
+cd /usr/src/delivery
+
+# remove ssh keys from image
+rm -f /etc/ssh/ssh_host_*
 
 echo \"root:raspberry\" | chpasswd
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
@@ -243,7 +246,7 @@ LANG=C chroot ${rootfs} /cleanup
 cd ${rootfs}
 
 sync
-sleep 15
+sleep 1
 
 umount -l ${bootp}
 
