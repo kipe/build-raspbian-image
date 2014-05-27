@@ -76,7 +76,7 @@ umount -l ${rootp}
 
 cd ${base_path}
 
-kpartx -d ${image}
+kpartx -vd ${image}
 
 echo "done."
 
