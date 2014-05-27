@@ -61,8 +61,6 @@
 # you need at least
 # apt-get install binfmt-support qemu qemu-user-static debootstrap kpartx lvm2 dosfstools
 
-set -x
-
 deb_mirror="http://archive.raspbian.org/raspbian"
 deb_local_mirror="http://localhost:3142/archive.raspbian.org/raspbian"
 
@@ -213,6 +211,16 @@ echo "console-common	console-data/keymap/policy	select	Select keymap from full l
 console-common	console-data/keymap/full	select	us
 " > debconf.set
 
+echo "# This script will run the first time the raspberry pi boots.
+# It is ran as root.
+
+rm /etc/ssh/ssh_host_*
+dpkg-reconfigure openssh-server >/var/log/regen_ssh_keys.log 2>&1
+echo finished >> /var/log/regen_ssh_keys.log
+
+" > root/firstboot.sh
+chmod 755 root/firstboot.sh
+
 echo "#!/bin/bash
 debconf-set-selections /debconf.set
 rm -f /debconf.set
@@ -225,10 +233,18 @@ apt-get update
 apt-get -y install git-core binutils ca-certificates curl
 curl -L --output /usr/bin/rpi-update https://raw.github.com/Hexxeh/rpi-update/master/rpi-update && chmod +x /usr/bin/rpi-update
 touch /boot/start.elf
+mkdir -p /lib/modules
 SKIP_BACKUP=1 /usr/bin/rpi-update
 
-apt-get -y install locales console-common ntp less vim
+apt-get -y install locales console-common openssh-server ntp less vim
+
+rm -f /etc/ssh/ssh_host_*
+
 apt-get -y install raspi-config
+apt-get -y install rpi-update
+
+cp /usr/share/doc/raspi-config/sample_profile_d.sh /etc/profile.d/raspi-config.sh
+chmod 755 /etc/profile.d/raspi-config.sh
 
 # execute install script at mounted external media (delivery contents folder)
 cd /usr/src/delivery
@@ -243,8 +259,20 @@ rm -f third-stage
 chmod +x third-stage
 LANG=C chroot ${rootfs} /third-stage
 
+echo "#!/bin/sh -e
+if [ ! -e /root/firstboot_done ]; then
+    if [ -e /root/firstboot.sh ]; then
+        /root/firstboot.sh
+    fi
+    touch /root/firstboot_done
+fi
+
+exit 0
+" > etc/rc.local
+
 echo "deb ${deb_mirror} ${deb_release} main contrib non-free
 deb-src ${deb_mirror} ${deb_release} main contrib non-free
+
 deb ${deb_raspiorg_mirror} ${deb_release} main
 deb-src ${deb_raspiorg_mirror} ${deb_release} main
 " > etc/apt/sources.list
@@ -278,6 +306,7 @@ echo "finishing ${image}"
 
 if [ "${image}" != "" ]; then
   kpartx -d ${image}
+  losetup -d ${device}
   echo "created image ${image}"
 fi
 
