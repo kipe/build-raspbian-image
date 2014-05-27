@@ -27,14 +27,14 @@ make-ssl-cert generate-default-snakeoil --force-overwrite
 sed -i 's|sessionSecret = .*|sessionSecret = `openssl rand -hex 64`|' /etc/spreed/webrtc.conf
 
 # Restart service.
-invoke-rc.5 spreed-webrtc restart
+invoke-rc.d spreed-webrtc restart
 
 " >> /root/firstboot.sh
 
 # Enable SSL listener.
 sed -i 's|;listen = 127.0.0.1:8443|listen = 0.0.0.0:8443|' /etc/spreed/webrtc.conf
 sed -i 's|;certificate = .*|certificate = /etc/ssl/certs/ssl-cert-snakeoil.pem|' /etc/spreed/webrtc.conf
-sed -i 's|;key = .*|key = /etc/ssl/certs/ssl-cert-snakeoil.key|' /etc/spreed/webrtc.conf
+sed -i 's|;key = .*|key = /etc/ssl/private/ssl-cert-snakeoil.key|' /etc/spreed/webrtc.conf
 sed -i 's|;stunURIs = .*|stunURIs = stun.spreed.me|' /etc/spreed/webrtc.conf
 
 
