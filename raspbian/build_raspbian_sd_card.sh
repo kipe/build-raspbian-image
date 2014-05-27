@@ -1,6 +1,10 @@
 #!/bin/bash
 
-# build your own Raspberry Pi SD card
+# Modifications by
+# Simon Eisenmann <simon@longsleep.org>
+#
+# 2014-05-25
+# Updated to latest changes in Raspbian and added raspberrypi.org repository.
 #
 # Modifications by
 # Andrius Kairiukstis <andrius@kairiukstis.com>, http://andrius.mobi/
@@ -61,6 +65,9 @@ set -x
 
 deb_mirror="http://archive.raspbian.org/raspbian"
 deb_local_mirror="http://localhost:3142/archive.raspbian.org/raspbian"
+
+deb_raspiorg_mirror="http://archive.raspberrypi.org/debian"
+deb_raspiorg_local_mirror="http://localhost:3142/archive.raspberrypi.org/debian"
 
 if [ ${EUID} -ne 0 ]; then
   echo "this tool must be run as root"
@@ -176,7 +183,11 @@ LANG=C chroot ${rootfs} /debootstrap/debootstrap --second-stage
 
 mount ${bootp} ${bootfs}
 
-echo "deb ${deb_local_mirror} ${deb_release} main contrib non-free
+echo "deb ${deb_local_mirror} ${deb_release} main contrib non-free rpi
+deb-src ${deb_local_mirror} ${deb_release} main contrib non-free rpi
+
+deb ${deb_raspiorg_local_mirror} ${deb_release} main
+deb-src ${deb_raspiorg_local_mirror} ${deb_release} main
 " > etc/apt/sources.list
 
 echo "dwc_otg.lpm_enable=0 console=ttyAMA0,115200 kgdboc=ttyAMA0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait" > boot/cmdline.txt
@@ -207,21 +218,22 @@ debconf-set-selections /debconf.set
 rm -f /debconf.set
 
 cd /usr/src/delivery
+
+wget ${deb_raspiorg_mirror}/raspberrypi.gpg.key -O - | apt-key add -
+
 apt-get update
 apt-get -y install git-core binutils ca-certificates curl
 curl -L --output /usr/bin/rpi-update https://raw.github.com/Hexxeh/rpi-update/master/rpi-update && chmod +x /usr/bin/rpi-update
 touch /boot/start.elf
 SKIP_BACKUP=1 /usr/bin/rpi-update
 
-apt-get -y install locales console-common ntp openssh-server less vim
+apt-get -y install locales console-common ntp less vim
+apt-get -y install raspi-config
 
 # execute install script at mounted external media (delivery contents folder)
 cd /usr/src/delivery
 ./install.sh
 cd /usr/src/delivery
-
-# remove ssh keys from image
-rm -f /etc/ssh/ssh_host_*
 
 echo \"root:raspberry\" | chpasswd
 sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
@@ -232,6 +244,9 @@ chmod +x third-stage
 LANG=C chroot ${rootfs} /third-stage
 
 echo "deb ${deb_mirror} ${deb_release} main contrib non-free
+deb-src ${deb_mirror} ${deb_release} main contrib non-free
+deb ${deb_raspiorg_mirror} ${deb_release} main
+deb-src ${deb_raspiorg_mirror} ${deb_release} main
 " > etc/apt/sources.list
 
 echo "#!/bin/bash
