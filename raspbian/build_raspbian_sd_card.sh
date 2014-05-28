@@ -215,7 +215,8 @@ echo "# This script will run the first time the raspberry pi boots.
 # It is ran as root.
 
 rm /etc/ssh/ssh_host_*
-dpkg-reconfigure openssh-server >/var/log/regen_ssh_keys.log 2>&1
+echo '' > /var/log/regen_ssh_keys.log
+dpkg-reconfigure openssh-server
 echo finished >> /var/log/regen_ssh_keys.log
 
 " > root/firstboot.sh
@@ -289,24 +290,36 @@ LANG=C chroot ${rootfs} /cleanup
 cd ${rootfs}
 
 sync
-sleep 1
 
-umount -l ${bootp}
+sleep 5
 
-umount -l ${rootfs}/usr/src/delivery
-umount -l ${rootfs}/dev/pts
-umount -l ${rootfs}/dev
-umount -l ${rootfs}/sys
-umount -l ${rootfs}/proc
+# Kill processes still running in chroot.
+for rootpath in /proc/*/root; do
+    rootlink=$(readlink $rootpath)
+    if [ "x$rootlink" != "x" ]; then
+        if [ "x${rootlink:0:${#rootfs}}" = "x$rootfs" ]; then
+            # this process is in the chroot...
+            PID=$(basename $(dirname "$rootpath"))
+            kill -9 "$PID"
+        fi
+    fi
+done
 
-umount -l ${rootfs}
-umount -l ${rootp}
+umount ${bootp}
+
+umount ${rootfs}/usr/src/delivery
+umount ${rootfs}/dev/pts
+umount ${rootfs}/dev
+umount ${rootfs}/sys
+umount ${rootfs}/proc
+
+umount ${rootfs}
+umount ${rootp}
 
 echo "finishing ${image}"
 
 if [ "${image}" != "" ]; then
-  kpartx -d ${image}
-  losetup -d ${device}
+  kpartx -vd ${image}
   echo "created image ${image}"
 fi
 

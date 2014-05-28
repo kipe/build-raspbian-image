@@ -17,6 +17,9 @@ wget http://packages.struktur.de/spreed-webrtc/raspbian/struktur-debian-package-
 apt-get update
 apt-get install spreed-webrtc ssl-cert
 
+# Add user to ssl-cert group.
+gpasswd -a spreed-webrtc ssl-cert
+
 # Add first boot actions.
 echo "
 
