@@ -110,7 +110,7 @@ if [ "${device}" == "" ]; then
   echo "no block device given, just creating an image"
   mkdir -p ${buildenv}
   image="${buildenv}/images/raspbian_basic_${deb_release}_${today}.img"
-  dd if=/dev/zero of=${image} bs=1MB count=3800
+  dd if=/dev/zero of=${image} bs=1MB count=1800
   device=`losetup -f --show ${image}`
   echo "image ${image} created and mounted as ${device}"
 else
