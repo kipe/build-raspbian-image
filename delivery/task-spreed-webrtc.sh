@@ -38,7 +38,7 @@ invoke-rc.d spreed-webrtc restart
 sed -i 's|;listen = 127.0.0.1:8443|listen = 0.0.0.0:8443|' /etc/spreed/webrtc.conf
 sed -i 's|;certificate = .*|certificate = /etc/ssl/certs/ssl-cert-snakeoil.pem|' /etc/spreed/webrtc.conf
 sed -i 's|;key = .*|key = /etc/ssl/private/ssl-cert-snakeoil.key|' /etc/spreed/webrtc.conf
-sed -i 's|;stunURIs = .*|stunURIs = stun.spreed.me|' /etc/spreed/webrtc.conf
+sed -i 's|;stunURIs = .*|stunURIs = stun:stun.spreed.me:443|' /etc/spreed/webrtc.conf
 
 
 echo "done."
