@@ -291,7 +291,7 @@ cd ${rootfs}
 
 sync
 
-sleep 5
+sleep 30
 
 # Kill processes still running in chroot.
 for rootpath in /proc/*/root; do
@@ -305,18 +305,21 @@ for rootpath in /proc/*/root; do
     fi
 done
 
-umount ${bootp}
+umount -l ${bootp}
 
-umount ${rootfs}/usr/src/delivery
-umount ${rootfs}/dev/pts
-umount ${rootfs}/dev
-umount ${rootfs}/sys
-umount ${rootfs}/proc
+umount -l ${rootfs}/usr/src/delivery
+umount -l ${rootfs}/dev/pts
+umount -l ${rootfs}/dev
+umount -l ${rootfs}/sys
+umount -l ${rootfs}/proc
 
-umount ${rootfs}
-umount ${rootp}
+umount -l ${rootfs}
+umount -l ${rootp}
 
 echo "finishing ${image}"
+
+sync
+sleep 5
 
 if [ "${image}" != "" ]; then
   kpartx -vd ${image}
