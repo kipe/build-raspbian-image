@@ -205,6 +205,7 @@ iface eth0 inet dhcp
 
 echo "vchiq
 snd_bcm2835
+bcm2708-rng
 " >> etc/modules
 
 echo "console-common	console-data/keymap/policy	select	Select keymap from full list
@@ -243,6 +244,7 @@ rm -f /etc/ssh/ssh_host_*
 
 apt-get -y install raspi-config
 apt-get -y install rpi-update
+apt-get -y install rng-tools
 
 cp /usr/share/doc/raspi-config/sample_profile_d.sh /etc/profile.d/raspi-config.sh
 chmod 755 /etc/profile.d/raspi-config.sh
