@@ -181,6 +181,12 @@ LANG=C chroot ${rootfs} /debootstrap/debootstrap --second-stage
 
 mount ${bootp} ${bootfs}
 
+# Prevent services from starting during installation.
+echo "#!/bin/sh
+exit 101
+EOF" > usr/sbin/policy-rc.d
+chmod +x usr/sbin/policy-rc.d
+
 echo "deb ${deb_local_mirror} ${deb_release} main contrib non-free rpi
 deb-src ${deb_local_mirror} ${deb_release} main contrib non-free rpi
 
@@ -212,10 +218,22 @@ echo "console-common	console-data/keymap/policy	select	Select keymap from full l
 console-common	console-data/keymap/full	select	us
 " > debconf.set
 
-echo "# This script will run the first time the raspberry pi boots.
+echo "#!/bin/bash
+# This script will run the first time the raspberry pi boots.
 # It is ran as root.
 
-rm /etc/ssh/ssh_host_*
+# Drain entropy pool to get rid of stored entropy after boot.
+dd if=/dev/urandom of=/dev/null bs=1024 count=10 2>/dev/null
+
+echo 'Waiting for entropy pool to fill. This can take a while ...'
+while entropy=\$(cat /proc/sys/kernel/random/entropy_avail)
+  (( \$entropy < 200 ))
+do sleep 1
+done
+echo 'Entropy is now available.'
+
+rm -f /etc/ssh/ssh_host_*
+echo 'Generating SSH host keys ...'
 echo '' > /var/log/regen_ssh_keys.log
 dpkg-reconfigure openssh-server
 echo finished >> /var/log/regen_ssh_keys.log
@@ -284,6 +302,10 @@ echo "#!/bin/bash
 aptitude update
 aptitude clean
 apt-get clean
+rm -f /etc/ssl/private/ssl-cert-snakeoil.key
+rm -f /etc/ssl/certs/ssl-cert-snakeoil.pem
+rm -f /var/lib/urandom/random-seed
+rm -f /usr/sbin/policy-rc.d
 rm -f cleanup
 " > cleanup
 chmod +x cleanup
