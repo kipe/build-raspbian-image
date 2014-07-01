@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export LC_ALL="C"
+
 machine=`uname -m`
 if [ "${machine}" != "armv7l" ]; then
   echo "This script will be executed at mounted raspbian enviroment (armv7l). Current environment is ${machine}."
