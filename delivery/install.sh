@@ -10,5 +10,5 @@ echo "Please check environment variables etc, this script can be executed ONLY w
 echo "When tasks done, type \"exit\" to return"
 echo ""
 
-bash
+# do not evalue # bash
 
