@@ -316,14 +316,14 @@ LANG=C chroot ${rootfs} /cleanup
 cd ${rootfs}
 
 sync
-
+cd 
 sleep 30
 
 # Kill processes still running in chroot.
 for rootpath in /proc/*/root; do
     rootlink=$(readlink $rootpath)
     if [ "x$rootlink" != "x" ]; then
-        if [ "x${rootlink:0:${#rootfs}}" = "x$rootfs" ]; then
+        if [ "x${rootlink:0:${#rootfs}}" = "x${rootfs}" ]; then
             # this process is in the chroot...
             PID=$(basename $(dirname "$rootpath"))
             kill -9 "$PID"
