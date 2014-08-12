@@ -28,7 +28,7 @@ DEBUG=1
 set -e
 
 # TEST: Run as root
-if [[ ${EUID} -ne 0 ]]; then
+if [ ${EUID} -ne 0 ]; then
 	[ "${DEBUG}" ]		&& echo "Error: ${0} have to be run as root."
 	[ "${VERBOSE}" ]	&& echo "Abort. Error-Code: ${ERR_USER_IS_NOT_ROOT}"
 	exit ${ERR_USER_IS_NOT_ROOT}
@@ -45,6 +45,7 @@ for TOOL in $DEPENDENCIES; do
 		EXIT=1
 	fi
 done
+
 if [ ${EXIT} -eq 1 ]; then
 	[ "${VERBOSE}" ]		&& echo "Abort. Error-Code: ${ERR_MISSING_DEPENDENCIES}"
 	exit ${ERR_MISSING_DEPENDENCIES}
@@ -64,11 +65,14 @@ PROFILE="${FLAGS_profile}"
 DEVICE="${FLAGS_device}"
 
 #######################################
+
 set -e
 # TEST: Existance of block device, if specified
 
+# if DEVICE is not empty
 if ! [ -z "${DEVICE}" ]; then
 
+	# if DEVICE is not a block device
 	if ! [ -b "${DEVICE}" ]; then
 		[ "${DEBUG}" ]		&& echo "Error: ${DEVICE} is not a block device or is not found."
 		[ "${VERBOSE}" ]	&& echo "Abort. Error-Code: ${ERR_BLOCK_DEVICE_IS_NOT_FOUND}"
@@ -82,14 +86,16 @@ fi
 
 [ "${VERBOSE}" ] &&
 	if [ "${DEVICE}" ]; then
-		echo "Write on device: ${DEVICE}"
+		echo "Info: Write on device ${DEVICE}"
 	else
-		echo "Write to disk image."
+		echo "Info: Write to disk image."
 	fi
 
 # TEST: Existance of profiles, if specified
+# if PROFILE is not empty
 if ! [ -z "${PROFILE}" ]; then
 
+	# if profile file is not found
 	if ! [ -e "./profiles/${PROFILE}" ]; then 
 		[ "${DEBUG}" ]		&& echo "Error: ${PROFILE} was not found under ./profiles/."
 		[ "${VERBOSE}" ]	&& echo "Abort. Error-Code: ${ERR_PROFILE_IS_NOT_FOUND}"
@@ -100,9 +106,8 @@ else
 
 	PROFILE="default"
 fi
-[ "${VERBOSE}" ] && echo "Apply settings from profile: ${PROFILE}"
+[ "${VERBOSE}" ] && echo "Info: Apply settings from profile: ${PROFILE}"
 
-#
 ### Finished all esential tests
 #######################################
 
@@ -139,16 +144,20 @@ IMAGE_PATH=""
 
 # if no block device was given, create image
 if [ "${DEVICE}" = "" ]; then
+
 	mkdir -p ${buildenv}
 	IMAGE_PATH="${buildenv}/images/${PROFILE}-${BUILD_TIME}.img"
 	dd if=/dev/zero of=${IMAGE_PATH} bs=1MB count=1800		# TODO: Decrease value or shrink at the end
 	DEVICE=$(losetup -f --show ${IMAGE_PATH})
-
+	
 	[ ${VERBOSE} ] && echo "Image ${IMAGE_PATH} created and mounted as ${DEVICE}."
+	
 else
+	# Erease MBR of device
 	dd if=/dev/zero of=${DEVICE} bs=512 count=1
-
+	
 	[ ${VERBOSE} ] && echo "Ereased block device ${DEVICE}."
+	
 fi
 
 # Create partions
@@ -171,24 +180,28 @@ EOF
 
 # Find partions on block device or in image file
 if [ "${IMAGE_PATH}" != "" ]; then
+	
 	losetup -d ${DEVICE}
 	DEVICE=`kpartx -va ${IMAGE_PATH} | sed -E 's/.*(loop[0-9])p.*/\1/g' | head -1`
 	DEVICE="/dev/mapper/${DEVICE}"
 	bootp=${DEVICE}p1
 	rootp=${DEVICE}p2
+	
 else
+	
 	if ! [ -b ${DEVICE}1 ]; then
 		bootp=${DEVICE}p1
 		rootp=${DEVICE}p2
 		if ! [ -b ${bootp} ]; then
 			[ "${DEBUG}" ]		&& echo "Error: Can't find boot partition neither as ${DEVICE}1 nor as ${DEVICE}p1."
-			[ "${VERBOSE}" ]	&& echo "Abort. Error-Code: $ERR_NO_BOOT_PARTITION_FOUND"
-			exit $ERR_NO_BOOT_PARTITION_FOUND
+			[ "${VERBOSE}" ]	&& echo "Abort. Error-Code: ${ERR_NO_BOOT_PARTITION_FOUND}"
+			exit ${ERR_NO_BOOT_PARTITION_FOUND}
 		fi
 	else
 		bootp=${DEVICE}1
 		rootp=${DEVICE}2
 	fi
+	
 fi
 
 mkfs.vfat ${bootp}
@@ -218,12 +231,13 @@ cd ${rootfs}
 
 #######################################
 # Start installation of base system
-#debootstrap --arch armhf --variant=minbase --no-check-gpg --foreign ${_DEB_RELEASE} ${rootfs} $(get_apt_source_mirror_url)
+#debootstrap --arch armhf --variant=minbase --no-check-gpg --foreign ${_DEB_RELEASE} ${rootfs} $(get_apt_source_mirror_url) # TODO: Research how to use in production
 debootstrap --arch armhf --no-check-gpg --foreign ${_DEB_RELEASE} ${rootfs} $(get_apt_source_mirror_url)
 
 
 # Complete installation process
 cp /usr/bin/qemu-arm-static usr/bin/
+
 LANG=C chroot ${rootfs} /debootstrap/debootstrap --second-stage
 
 mount ${bootp} ${bootfs}
@@ -263,53 +277,63 @@ echo "console-common	console-data/keymap/policy	select	Select keymap from full l
 console-common	console-data/keymap/full	select	${_KEYMAP}
 " > debconf.set
 
-## Write first boot script
+## Write firstboot script
 echo "#!/bin/bash
 # This script will run the first time the raspberry pi boots.
 # It is ran as root.
 
-echo "$(date) Starting firstboot.sh" >> /dev/kmsg
+# Get current date from debian time server
+ntpdate 0.debian.pool.ntp.org
 
-echo "$(date) Reconfiguring openssh-server" >> /dev/kmsg
-echo "$(date)   Collecting entropy" >> /dev/kmsg
+echo 'Starting firstboot.sh' >> /dev/kmsg
+
+echo 'Reconfiguring openssh-server' >> /dev/kmsg
+echo '  Collecting entropy ...' >> /dev/kmsg
+
 # Drain entropy pool to get rid of stored entropy after boot.
 dd if=/dev/urandom of=/dev/null bs=1024 count=10 2>/dev/null
 
-while entropy=\$(cat /proc/sys/kernel/random/entropy_avail)
-  (( \$entropy < 200 ))
-do sleep 1
+while entropy=\$(cat /proc/sys/kernel/random/entropy_avail) (( \$entropy < 200 ))
+	do sleep 1
 done
 
 rm -f /etc/ssh/ssh_host_*
-#echo 'Generating SSH host keys ...'
+echo '  Generating new SSH host keys ...' >> /dev/kmsg
 dpkg-reconfigure openssh-server
-echo "$(date) Reconfigured openssh-server" >> /dev/kmsg
+echo '  Reconfigured openssh-server' >> /dev/kmsg
 
 
 # Set locale
 export LANGUAGE=${_LOCALES}.${_ENCODING}
 export LANG=${_LOCALES}.${_ENCODING}
 export LC_ALL=${_LOCALES}.${_ENCODING}
+
 cat << EOF | debconf-set-selections
 locales   locales/locales_to_be_generated multiselect     ${_LOCALES}.${_ENCODING} ${_ENCODING}
 EOF
+
 rm /etc/locale.gen
 dpkg-reconfigure -f noninteractive locales
 update-locale LANG="${_LOCALES}.${_ENCODING}"
+
 cat << EOF | debconf-set-selections
 locales   locales/default_environment_locale select       ${_LOCALES}.${_ENCODING}
 EOF
-echo "$(date) Reconfigured locale" >> /dev/kmsg
+
+echo 'Reconfigured locale' >> /dev/kmsg
+
 
 # Set timezone
-echo "${_TIMEZONE}" > /etc/timezone
+echo '${_TIMEZONE}' > /etc/timezone
 dpkg-reconfigure -f noninteractive tzdata
-#echo '$(date) Reconfigured timezone' >> /var/log/first_boot.log
-echo "$(date) Reconfigured timezone" >> /dev/kmsg
+
+echo 'Reconfigured timezone' >> /dev/kmsg
+
 
 # Expand filesystem
+echo 'Expanding rootfs ...' >> /dev/kmsg
 raspi-config --expand-rootfs
-echo '$(date) Expand rootfs done' >> /dev/kmsg
+echo 'Expand rootfs done' >> /dev/kmsg
 
 sleep 5
 
@@ -335,6 +359,7 @@ apt-get install --reinstall language-pack-en
 
 apt-get -y install aptitude gpgv git-core binutils ca-certificates wget curl # TODO FIXME
 
+# adding Debian Archive Automatic Signing Key (7.0/wheezy) <ftpmaster@debian.org> to apt-keyring
 gpg --keyserver pgpkeys.mit.edu --recv-key 8B48AD6246925553
 gpg -a --export 8B48AD6246925553 | apt-key add -
 
@@ -349,14 +374,18 @@ apt-get -y install ${_APT_PACKAGES} # FIXME
 
 rm -f /etc/ssh/ssh_host_*
 
+
 apt-get -y install lua5.1 triggerhappy
 apt-get -y install dmsetup libdevmapper1.02.1 libparted0debian1 parted
+
 wget http://archive.raspberrypi.org/debian/pool/main/r/raspi-config/raspi-config_20131216-1_all.deb
 dpkg -i raspi-config_20131216-1_all.deb
 rm -f raspi-config_20131216-1_all.deb
 
+
 apt-get -y install rng-tools
 
+# Dont start raspi-config on first login
 #cp /usr/share/doc/raspi-config/sample_profile_d.sh /etc/profile.d/raspi-config.sh
 #chmod 755 /etc/profile.d/raspi-config.sh
 
@@ -375,6 +404,7 @@ chmod +x third-stage
 LANG=C chroot ${rootfs} /third-stage
 
 ###################
+# Execute firstboot.sh only on first boot
 echo "#!/bin/sh -e
 if [ ! -e /root/firstboot_done ]; then
 	if [ -e /root/firstboot.sh ]; then
@@ -403,25 +433,26 @@ rm -f /usr/sbin/policy-rc.d
 rm -f cleanup
 " > cleanup
 chmod +x cleanup
+
 LANG=C chroot ${rootfs} /cleanup
 
+###################
+
 cd ${rootfs}
-
 sync
-
 sleep 30
-set +e
 
+set +e
 # Kill processes still running in chroot.
 for rootpath in /proc/*/root; do
-    rootlink=$(readlink $rootpath)
-    if [ "x${rootlink}" != "x" ]; then
-        if [ "x${rootlink:0:${#rootfs}}" = "x${rootfs}" ]; then
-            # this process is in the chroot...
-            PID=$(basename $(dirname "$rootpath"))
-            kill -9 "$PID"
-        fi
-    fi
+	rootlink=$(readlink $rootpath)
+	if [ "x${rootlink}" != "x" ]; then
+		if [ "x${rootlink:0:${#rootfs}}" = "x${rootfs}" ]; then
+			# this process is in the chroot...
+			PID=$(basename $(dirname "$rootpath"))
+			kill -9 "$PID"
+		fi
+	fi
 done
 
 umount -l ${bootp}
@@ -435,17 +466,17 @@ umount -l ${rootfs}/proc
 umount -l ${rootfs}
 umount -l ${rootp}
 
-[ "${VERBOSE}" ]		&& echo "Finishing ${IMAGE_PATH}."
-
 sync
 sleep 5
 
 if [ "${IMAGE_PATH}" != "" ]; then
 	kpartx -vd ${IMAGE_PATH}
-	# [ "${VERBOSE}" ]		&& echo "Created image ${IMAGE_PATH}."
+	[ "${VERBOSE}" ]		&& echo "Info: Created image ${IMAGE_PATH}."
+else
+	[ "${VERBOSE}" ]		&& echo "Info: Wrote to ${DEVICE}.
 fi
 
-[ "${VERBOSE}" ]		&& echo "Done." # TODO
+[ "${VERBOSE}" ]		&& echo "Info: Done."
 
 exit ${SUCCESS}
 
