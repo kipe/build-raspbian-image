@@ -4,12 +4,72 @@
 # Usage:
 #	./build_pi_image.sh [--profil default] [--device /dev/mmcblk0]
 #
+# 2014-08
+# Rewriting and add settings/profiles support by Bernd Naumann
 #
+# Modifications by
+# Simon Eisenmann <simon@longsleep.org>
+#
+# 2014-05-25
+# Updated to latest changes in Raspbian and added raspberrypi.org repository.
+#
+# Modifications by
+# Andrius Kairiukstis <andrius@kairiukstis.com>, http://andrius.mobi/
+#
+# 2013-05-05
+#	resulting files will be stored in rpi folder of script
+#	during installation, delivery contents folder will be mounted and install.sh script within it will be called
+#
+# 2013-04-20
+#	distro replaced from Debian Wheezy to Raspbian (http://raspbian.org)
+#	build environment and resulting files not in /tmp/rpi instead of /root/rpi
+#	fixed umount issue
+#	keymap selection replaced from German (deadkeys) to the US
+#	size of resulting image was increased to 2GB
+#
+#	Install apt-cacher-ng (apt-get install apt-cacher-ng) and use deb_local_mirror
+#	more: https://www.unix-ag.uni-kl.de/~bloch/acng/html/config-servquick.html#config-client
+#
+#
+#
+# by Klaus M Pfeiffer, http://blog.kmp.or.at/
+#
+# 2012-06-24
+#	just checking for how partitions are called on the system (thanks to Ricky Birtles and Luke Wilkinson)
+#	using http.debian.net as debian mirror,
+#	see http://rgeissert.blogspot.co.at/2012/06/introducing-httpdebiannet-debians.html
+#	tested successfully in debian squeeze and wheezy VirtualBox
+#	added hint for lvm2
+#	added debconf-set-selections for kezboard
+#	corrected bug in writing to etc/modules
+#
+# 2012-06-16
+#	improoved handling of local debian mirror
+#	added hint for dosfstools (thanks to Mike)
+#	added vchiq & snd_bcm2835 to /etc/modules (thanks to Tony Jones)
+#	take the value fdisk suggests for the boot partition to start (thanks to Mike)
+#
+# 2012-06-02
+#       improoved to directly generate an image file with the help of kpartx
+#	added deb_local_mirror for generating images with correct sources.list
+#
+# 2012-05-27
+#	workaround for https://github.com/Hexxeh/rpi-update/issues/4
+#	just touching /boot/start.elf before running rpi-update
+#
+# 2012-05-20
+#	back to wheezy, http://bugs.debian.org/672851 solved,
+#	http://packages.qa.debian.org/i/ifupdown/news/20120519T163909Z.html
+#
+# 2012-05-19
+#	stage3: remove eth* from /lib/udev/rules.d/75-persistent-net-generator.rules
+#	initial
+#
+# you need at least
+# apt-get install binfmt-support qemu qemu-user-static debootstrap kpartx lvm2 dosfstools
+#
+###############################################################################
 
-# Copyright notices
-# Refactorying
-#
-##
 ### Set runtime enviroment and do initial tests
 ##
 #
@@ -283,7 +343,7 @@ echo "#!/bin/bash
 # It is ran as root.
 
 # Get current date from debian time server
-ntpdate 0.debian.pool.ntp.org
+#ntpdate 0.debian.pool.ntp.org
 
 echo 'Starting firstboot.sh' >> /dev/kmsg
 
@@ -473,7 +533,7 @@ if [ "${IMAGE_PATH}" != "" ]; then
 	kpartx -vd ${IMAGE_PATH}
 	[ "${VERBOSE}" ]		&& echo "Info: Created image ${IMAGE_PATH}."
 else
-	[ "${VERBOSE}" ]		&& echo "Info: Wrote to ${DEVICE}.
+	[ "${VERBOSE}" ]		&& echo "Info: Wrote to ${DEVICE}."
 fi
 
 [ "${VERBOSE}" ]		&& echo "Info: Done."
