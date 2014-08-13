@@ -18,7 +18,7 @@ Install minimal set of packages:
 
 	./install.sh
 
-Run build_raspbian_sd_card.sh script, do burn your SD card
+Run build-rpi-image.sh script, do burn your SD card
 
 	./build-rpi-image.sh --device /dev/mmcblk0
 
@@ -28,5 +28,5 @@ OR to create IMG file (you'll find it under ./rpi folder)
 
 To specify a profile
 
-	./build-rpi-image --profile default [--device /dev/mmcblk0]
+	./build-rpi-image.sh --profile default [--device /dev/mmcblk0]
 
