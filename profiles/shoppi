@@ -1,0 +1,17 @@
+#!/bin/bash
+
+_DEB_RELEASE="wheezy"
+_APT_SOURCE="http://archive.raspbian.org/raspbian"
+_APT_PACKAGES="locales console-common openssh-server ntp sudo less nodm matchbox-window-manager uzbl usbutils screen python-pip"
+
+_HOSTNAME="shoppi1"
+_NET_CONFIG="dhcp"
+
+_USER_NAME="root"
+_USER_PASS="(dummy)"
+
+_KEYMAP="us"
+_TIMEZONE="UTC"
+_LOCALES="en_US"
+_ENCODING="UTF-8"
+
