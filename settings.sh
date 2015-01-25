@@ -15,7 +15,7 @@ _DEB_RELEASE="wheezy"				# jessie | wheezy | squeeze
 _APT_SOURCE_DEBIAN="ftp://ftp.debian.org/debian"
 _APT_SOURCE_DEBIAN_CDN="http://http.debian.net/debian"
 
-_APT_SOURCE_RASPBIAN="http://archive.raspbian.org/raspbian"
+#_APT_SOURCE_RASPBIAN="http://archive.raspbian.org/raspbian"
 
 # _APT_SOURCE_DEB_MULTIMEDIA="http://www.deb-multimedia.org"
 
@@ -71,6 +71,7 @@ _ENCODING=""
 get_apt_source_mirror_url () {
 
 	HTTP="http://"
+	echo "[INFO] http://localhost:3142/${_APT_SOURCE#${HTTP}}" 1>&2
 	echo -n "http://localhost:3142/${_APT_SOURCE#${HTTP}}"
 }
 
@@ -88,7 +89,7 @@ get_apt_sources_final_stage () {
 deb ${_APT_SOURCE} ${_DEB_RELEASE} main contrib non-free rpi
 deb-src ${_APT_SOURCE} ${_DEB_RELEASE} main contrib non-free rpi
 
-deb ${_APT_SOURCE} ${_DEB_RELEASE}-updates main contrib non-free
+#deb ${_APT_SOURCE} ${_DEB_RELEASE}-updates main contrib non-free  # 'wheezy-updates' does not exist, apparently
 
 deb http://security.debian.org/ ${_DEB_RELEASE}/updates main contrib non-free
 deb-src http://security.debian.org/ ${_DEB_RELEASE}/updates main contrib non-free
