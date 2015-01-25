@@ -1,10 +1,10 @@
 #!/bin/bash
 
 _DEB_RELEASE="wheezy"
-_APT_SOURCE="http://archive.raspbian.org/raspbian"
-_APT_PACKAGES="locales console-common openssh-server ntp sudo less nodm matchbox-window-manager uzbl usbutils screen python-pip"
+_APT_SOURCE="http://mirrordirector.raspbian.org/raspbian"
+_APT_PACKAGES="locales console-common openssh-server ntp sudo less nodm matchbox-window-manager uzbl usbutils screen libyaml-dev python python-dev python-pip"
 
-_HOSTNAME="shoppi1"
+_HOSTNAME="shoppi"
 _NET_CONFIG="dhcp"
 
 _USER_NAME="root"
