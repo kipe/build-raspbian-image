@@ -4,6 +4,11 @@
 # Usage:
 #	./build_pi_image.sh [--profil default] [--device /dev/mmcblk0]
 #
+# 2014-01-24 jps3 (at) lehigh (dot) edu
+# Minor cleanups to /root/firstboot.sh script.
+# Debugging output added to /etc/rc.local script.
+# Installs ansible via pip. 
+#
 # 2014-08
 # Rewriting and add settings/profiles support by Bernd Naumann
 #
@@ -339,28 +344,34 @@ console-common	console-data/keymap/full	select	${_KEYMAP}
 
 ## Write firstboot script
 echo "#!/bin/bash
+#set -x
 # This script will run the first time the raspberry pi boots.
-# It is ran as root.
+# It is run as root.
+
+function debug_msg () {
+	echo \$* > /dev/kmsg
+}
+
 
 # Get current date from debian time server
 #ntpdate 0.debian.pool.ntp.org
 
-echo 'Starting firstboot.sh' >> /dev/kmsg
+debug_msg  'Starting firstboot.sh'
 
-echo 'Reconfiguring openssh-server' >> /dev/kmsg
-echo '  Collecting entropy ...' >> /dev/kmsg
+debug_msg  'Reconfiguring openssh-server'
+debug_msg  '  Collecting entropy ...'
 
 # Drain entropy pool to get rid of stored entropy after boot.
 dd if=/dev/urandom of=/dev/null bs=1024 count=10 2>/dev/null
 
-while entropy=\$(cat /proc/sys/kernel/random/entropy_avail) (( \$entropy < 200 ))
+while (( \$(cat /proc/sys/kernel/random/entropy_avail) < 200 ))
 	do sleep 1
 done
 
 rm -f /etc/ssh/ssh_host_*
-echo '  Generating new SSH host keys ...' >> /dev/kmsg
+debug_msg  '  Generating new SSH host keys ...'
 dpkg-reconfigure openssh-server
-echo '  Reconfigured openssh-server' >> /dev/kmsg
+debug_msg  '  Reconfigured openssh-server'
 
 
 # Set locale
@@ -380,20 +391,20 @@ cat << EOF | debconf-set-selections
 locales   locales/default_environment_locale select       ${_LOCALES}.${_ENCODING}
 EOF
 
-echo 'Reconfigured locale' >> /dev/kmsg
+debug_msg  'Reconfigured locale'
 
 
 # Set timezone
 echo '${_TIMEZONE}' > /etc/timezone
 dpkg-reconfigure -f noninteractive tzdata
 
-echo 'Reconfigured timezone' >> /dev/kmsg
+debug_msg  'Reconfigured timezone'
 
 
 # Expand filesystem
-echo 'Expanding rootfs ...' >> /dev/kmsg
+debug_msg  'Expanding rootfs ...'
 raspi-config --expand-rootfs
-echo 'Expand rootfs done' >> /dev/kmsg
+debug_msg  'Expand rootfs done'
 
 sleep 5
 
@@ -442,8 +453,9 @@ wget http://archive.raspberrypi.org/debian/pool/main/r/raspi-config/raspi-config
 dpkg -i raspi-config_20131216-1_all.deb
 rm -f raspi-config_20131216-1_all.deb
 
-
 apt-get -y install rng-tools
+
+pip install ansible
 
 # Dont start raspi-config on first login
 #cp /usr/share/doc/raspi-config/sample_profile_d.sh /etc/profile.d/raspi-config.sh
@@ -466,11 +478,16 @@ LANG=C chroot ${rootfs} /third-stage
 ###################
 # Execute firstboot.sh only on first boot
 echo "#!/bin/sh -e
+. /lib/lsb/init-functions
 if [ ! -e /root/firstboot_done ]; then
 	if [ -e /root/firstboot.sh ]; then
-		/root/firstboot.sh
+        log_daemon_msg \"Running /root/firstboot.sh\"
+		/root/firstboot.sh 2>&1 >>/root/firstboot.log
 	fi
+    log_daemon_msg \"Touching file flag /root/firstboot_done\"
 	touch /root/firstboot_done
+    log_daemon_msg \"Attempting to set ssh to start\"
+    update-rc.d ssh remove && update-rc.d ssh defaults && service ssh start
 fi
 
 exit 0
@@ -491,6 +508,7 @@ rm -f /etc/ssl/certs/ssl-cert-snakeoil.pem
 rm -f /var/lib/urandom/random-seed
 rm -f /usr/sbin/policy-rc.d
 rm -f cleanup
+/usr/sbin/update-rc.d ssh remove 
 " > cleanup
 chmod +x cleanup
 
