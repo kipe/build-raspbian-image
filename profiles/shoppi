@@ -2,7 +2,7 @@
 
 _DEB_RELEASE="wheezy"
 _APT_SOURCE="http://mirrordirector.raspbian.org/raspbian"
-_APT_PACKAGES="locales console-common openssh-server ntp sudo less fbi fim nodm matchbox-window-manager uzbl usbutils screen libyaml-dev python python-dev python-pip"
+_APT_PACKAGES="locales console-common openssh-server ntp sudo less fbi fim nodm matchbox-window-manager xinit uzbl usbutils screen libyaml-dev python python-dev python-pip"
 
 _HOSTNAME="shoppi"
 _NET_CONFIG="dhcp"

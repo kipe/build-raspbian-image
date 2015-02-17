@@ -87,12 +87,7 @@ get_apt_sources_final_stage () {
 
 	echo "
 deb ${_APT_SOURCE} ${_DEB_RELEASE} main contrib non-free rpi
-deb-src ${_APT_SOURCE} ${_DEB_RELEASE} main contrib non-free rpi
-
-#deb ${_APT_SOURCE} ${_DEB_RELEASE}-updates main contrib non-free  # 'wheezy-updates' does not exist, apparently
-
-deb http://security.debian.org/ ${_DEB_RELEASE}/updates main contrib non-free
-deb-src http://security.debian.org/ ${_DEB_RELEASE}/updates main contrib non-free
+#deb http://archive.raspberrypi.org/debian ${_DEB_RELEASE} main
 "
 }
 
