@@ -3,6 +3,8 @@
 # Options sort by appaerance
 
 _BOOT_PARTITION_SIZE="64M"		# "64M" = 64 MB
+_ROOT_PARTITION_SIZE="1024M"		# "64M" = 64 MB
+_VAR_PARTITION_SIZE="512M"		# "64M" = 64 MB
 
 ###############################################################################
 
@@ -12,7 +14,7 @@ _DEB_RELEASE="wheezy"				# jessie | wheezy | squeeze
 
 ###################
 # Available Debian Mirrors for Installation
-_APT_SOURCE_DEBIAN="ftp://ftp.debian.org/debian"
+_APT_SOURCE_DEBIAN="ftp://ftp.fi.debian.org/debian"
 _APT_SOURCE_DEBIAN_CDN="http://http.debian.net/debian"
 
 #_APT_SOURCE_RASPBIAN="http://archive.raspbian.org/raspbian"
@@ -35,6 +37,9 @@ _APT_SOURCE_DEBIAN_CDN="http://http.debian.net/debian"
 _FSTAB="
 proc			/proc	proc	defaults	0	0
 /dev/mmcblk0p1	/boot	vfat	defaults	0	0
+/dev/mmcblk0p2	/	ext4	ro,defaults	0	0
+/dev/mmcblk0p3	/var	ext4	defaults	0	0
+/dev/mmcblk0p4	/home	ext4	defaults	0	0
 "
 
 _HOSTNAME=""
@@ -71,8 +76,10 @@ _ENCODING=""
 get_apt_source_mirror_url () {
 
 	HTTP="http://"
-	echo "[INFO] http://localhost:3142/${_APT_SOURCE#${HTTP}}" 1>&2
-	echo -n "http://localhost:3142/${_APT_SOURCE#${HTTP}}"
+#	echo "[INFO] http://localhost:3142/${_APT_SOURCE#${HTTP}}" 1>&2
+	echo "[INFO] ${_APT_SOURCE}" 1>&2
+#	echo -n "http://localhost:3142/${_APT_SOURCE#${HTTP}}"
+	echo -n "${_APT_SOURCE}"
 }
 
 get_apt_sources_first_stage () {

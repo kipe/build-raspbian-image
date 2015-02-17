@@ -201,6 +201,7 @@ cd ${absolute_path}
 
 
 rootfs="${buildenv}/rootfs"
+varfs="${buildenv}/varfs"
 bootfs="${rootfs}/boot"
 
 BUILD_TIME="$(date +%Y%m%d-%H%M%S)"
@@ -212,17 +213,17 @@ if [ "${DEVICE}" = "" ]; then
 
 	mkdir -p ${buildenv}
 	IMAGE_PATH="${buildenv}/images/${PROFILE}-${BUILD_TIME}.img"
-	dd if=/dev/zero of=${IMAGE_PATH} bs=1MB count=1800		# TODO: Decrease value or shrink at the end
+	dd if=/dev/zero of=${IMAGE_PATH} bs=1MB count=2048		# TODO: Decrease value or shrink at the end
 	DEVICE=$(losetup -f --show ${IMAGE_PATH})
-	
+
 	[ ${VERBOSE} ] && echo "Image ${IMAGE_PATH} created and mounted as ${DEVICE}."
-	
+
 else
 	# Erease MBR of device
 	dd if=/dev/zero of=${DEVICE} bs=512 count=1
-	
+
 	[ ${VERBOSE} ] && echo "Ereased block device ${DEVICE}."
-	
+
 fi
 
 # Create partions
@@ -239,6 +240,15 @@ n
 p
 2
 
++${_ROOT_PARTITION_SIZE}
+n
+p
+3
+
++${_VAR_PARTITION_SIZE}
+n
+p
+
 
 w
 EOF
@@ -251,12 +261,16 @@ if [ "${IMAGE_PATH}" != "" ]; then
 	DEVICE="/dev/mapper/${DEVICE}"
 	bootp=${DEVICE}p1
 	rootp=${DEVICE}p2
+	varp=${DEVICE}p3
+	homep=${DEVICE}p4
 	
 else
 	
 	if ! [ -b ${DEVICE}1 ]; then
 		bootp=${DEVICE}p1
 		rootp=${DEVICE}p2
+		varp=${DEVICE}p3
+		homep=${DEVICE}p4
 		if ! [ -b ${bootp} ]; then
 			[ "${DEBUG}" ]		&& echo "Error: Can't find boot partition neither as ${DEVICE}1 nor as ${DEVICE}p1."
 			[ "${VERBOSE}" ]	&& echo "Abort. Error-Code: ${ERR_NO_BOOT_PARTITION_FOUND}"
@@ -265,31 +279,39 @@ else
 	else
 		bootp=${DEVICE}1
 		rootp=${DEVICE}2
+		varp=${DEVICE}3
+		homep=${DEVICE}4
 	fi
 	
 fi
 
 mkfs.vfat ${bootp}
 mkfs.ext4 ${rootp}
+mkfs.ext4 ${varp}
+mkfs.ext4 ${homep}
 
 #######################################
 
 set -e
 
 mkdir -p ${rootfs}
+mkdir -p ${varfs}
 
 mount ${rootp} ${rootfs}
+mount ${varp} ${varfs}
 
 mkdir -p ${rootfs}/proc
 mkdir -p ${rootfs}/sys
 mkdir -p ${rootfs}/dev
 mkdir -p ${rootfs}/dev/pts
+mkdir -p ${rootfs}/var
 #mkdir -p ${rootfs}/usr/src/delivery
 
 mount -t proc none ${rootfs}/proc
 mount -t sysfs none ${rootfs}/sys
 mount -o bind /dev ${rootfs}/dev
 mount -o bind /dev/pts ${rootfs}/dev/pts
+mount -o bind ${varfs} ${rootfs}/var
 #mount -o bind ${delivery_path} ${rootfs}/usr/src/delivery
 
 cd ${rootfs}
@@ -335,6 +357,9 @@ set_network_config ${_NET_CONFIG}
 echo "vchiq
 snd_bcm2835
 bcm2708-rng
+
+i2c-bcm2708
+i2c-dev
 " >> etc/modules
 
 # debconf.set
@@ -353,6 +378,8 @@ function debug_msg () {
 }
 
 
+mount -o remount,rw /
+mount -o remount,rw /boot
 # Get current date from debian time server
 #ntpdate 0.debian.pool.ntp.org
 
@@ -402,9 +429,9 @@ debug_msg  'Reconfigured timezone'
 
 
 # Expand filesystem
-debug_msg  'Expanding rootfs ...'
-raspi-config --expand-rootfs
-debug_msg  'Expand rootfs done'
+#debug_msg  'Expanding rootfs ...'
+#raspi-config --expand-rootfs
+#debug_msg  'Expand rootfs done'
 
 sleep 5
 
@@ -443,6 +470,11 @@ gpg --keyserver pgpkeys.mit.edu --recv-key 8B48AD6246925553
 gpg -a --export 8B48AD6246925553 | apt-key add -
 
 wget -q http://archive.raspberrypi.org/debian/raspberrypi.gpg.key -O - | apt-key add -
+
+# install telldus-core
+wget -q http://download.telldus.se/debian/telldus-public.key -O- | apt-key add -
+echo 'deb http://download.telldus.com/debian/ stable main' >> /etc/apt/sources.list
+apt-get update
 
 curl -L --output /usr/bin/rpi-update https://raw.github.com/Hexxeh/rpi-update/master/rpi-update && chmod +x /usr/bin/rpi-update
 touch /boot/start.elf
@@ -548,6 +580,10 @@ umount -l ${rootfs}/dev/pts
 umount -l ${rootfs}/dev
 umount -l ${rootfs}/sys
 umount -l ${rootfs}/proc
+umount -l ${rootfs}/var
+
+umount -l ${varfs}
+umount -l ${varp}
 
 umount -l ${rootfs}
 umount -l ${rootp}

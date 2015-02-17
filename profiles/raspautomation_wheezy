@@ -1,0 +1,16 @@
+#!/bin/bash
+
+_DEB_RELEASE="wheezy"					# stable | testing | unstable | jessie | wheezy | squeeze, ...
+_APT_SOURCE="http://mirrordirector.raspbian.org/raspbian"
+_APT_PACKAGES="locales console-common openssh-server ntp sudo less fbi fim nodm screen libyaml-dev python python-dev python-pip python-setuptools python-ow redis-server telldus-core"
+
+_HOSTNAME="raspautomation"
+_NET_CONFIG="dhcp"
+
+_USER_NAME="root"
+_USER_PASS="raspautomation"
+
+_KEYMAP="fi"
+_TIMEZONE="UTC"
+_LOCALES="en_GB"
+_ENCODING="UTF-8"
