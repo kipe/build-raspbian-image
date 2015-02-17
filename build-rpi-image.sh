@@ -7,7 +7,7 @@
 # 2014-01-24 jps3 (at) lehigh (dot) edu
 # Minor cleanups to /root/firstboot.sh script.
 # Debugging output added to /etc/rc.local script.
-# Installs ansible via pip. 
+# (not necessary? still learning about Ansible!) Installs ansible via pip. 
 #
 # 2014-08
 # Rewriting and add settings/profiles support by Bernd Naumann
@@ -415,7 +415,15 @@ chmod 755 root/firstboot.sh
 
 ######################################
 # enable login on serial console
-#echo "T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100" > etc/inittab
+echo "T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100" > etc/inittab
+#######################################
+# /boot/config.txt defaults
+echo "# $(date +"%Y-%m-%d @ %H:%M:%S")
+#hdmi_force_hotplug=1
+gpu_mem=128
+disable_overscan=1
+disable_splash=1
+" > boot/config.txt
 
 #######################################
 echo "#!/bin/bash
@@ -455,7 +463,7 @@ rm -f raspi-config_20131216-1_all.deb
 
 apt-get -y install rng-tools
 
-pip install ansible
+#pip install ansible
 
 # Dont start raspi-config on first login
 #cp /usr/share/doc/raspi-config/sample_profile_d.sh /etc/profile.d/raspi-config.sh
@@ -550,6 +558,7 @@ sleep 5
 if [ "${IMAGE_PATH}" != "" ]; then
 	kpartx -vd ${IMAGE_PATH}
 	[ "${VERBOSE}" ]		&& echo "Info: Created image ${IMAGE_PATH}."
+    zip -j "${IMAGE_PATH#.img}.zip" "${IMAGE_PATH}"
 else
 	[ "${VERBOSE}" ]		&& echo "Info: Wrote to ${DEVICE}."
 fi
